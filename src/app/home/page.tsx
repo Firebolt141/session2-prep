@@ -5,6 +5,12 @@ import Link from "next/link";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+const NISHI_WASEDA = {
+  name: "Nishi Waseda, Tokyo",
+  lat: 35.7074,
+  lon: 139.7016,
+};
+
 const TYPE_LABELS = {
   trip: "Trip",
   event: "Event",
@@ -27,6 +33,12 @@ type PlannerItem = {
   participants?: string;
   memo?: string;
   completed?: boolean;
+};
+
+type WeatherState = {
+  temperature: number;
+  code: number;
+  time: string;
 };
 
 const createId = () =>
@@ -69,6 +81,29 @@ const getTypePill = (type: ItemType) => {
   if (type === "event") return "pill sky";
   if (type === "todo") return "pill mint";
   return "pill lavender";
+};
+
+const weatherIconForCode = (code: number) => {
+  if ([0].includes(code)) return "☀️";
+  if ([1, 2].includes(code)) return "🌤️";
+  if ([3, 45, 48].includes(code)) return "☁️";
+  if ([51, 53, 55, 56, 57].includes(code)) return "🌦️";
+  if ([61, 63, 65, 80, 81, 82].includes(code)) return "🌧️";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "❄️";
+  if ([95, 96, 99].includes(code)) return "⛈️";
+  return "🌥️";
+};
+
+const weatherLabelForCode = (code: number) => {
+  if (code === 0) return "Clear";
+  if ([1, 2].includes(code)) return "Partly cloudy";
+  if ([3].includes(code)) return "Cloudy";
+  if ([45, 48].includes(code)) return "Foggy";
+  if ([51, 53, 55, 56, 57].includes(code)) return "Drizzle";
+  if ([61, 63, 65, 80, 81, 82].includes(code)) return "Rain";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "Snow";
+  if ([95, 96, 99].includes(code)) return "Thunder";
+  return "Weather";
 };
 
 const isAutoCompleted = (item: PlannerItem) => {
@@ -120,11 +155,15 @@ export default function HomePage() {
   const [month, setMonth] = useState<Date>(getMonthStart(new Date()));
   const [items, setItems] = useState<PlannerItem[]>([]);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuView, setMenuView] = useState<ItemType | "past">("trip");
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<PlannerItem | null>(null);
   const [formData, setFormData] = useState<PlannerItem>(() =>
     buildDefaultForm(formatDateKey(new Date()))
   );
+  const [weather, setWeather] = useState<WeatherState | null>(null);
+  const [weatherError, setWeatherError] = useState<string | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("asuka-planner-items");
@@ -136,6 +175,36 @@ export default function HomePage() {
   useEffect(() => {
     localStorage.setItem("asuka-planner-items", JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    const loadWeather = async () => {
+      setWeatherLoading(true);
+      setWeatherError(null);
+      try {
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${NISHI_WASEDA.lat}&longitude=${NISHI_WASEDA.lon}&current_weather=true&timezone=Asia%2FTokyo`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch weather");
+        }
+        const data = await response.json();
+        if (!data.current_weather) {
+          throw new Error("Weather unavailable");
+        }
+        setWeather({
+          temperature: data.current_weather.temperature,
+          code: data.current_weather.weathercode,
+          time: data.current_weather.time,
+        });
+      } catch (error) {
+        setWeatherError("Unable to load weather right now.");
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+
+    loadWeather();
+  }, []);
 
   const dateKey = formatDateKey(selectedDate);
 
@@ -154,6 +223,13 @@ export default function HomePage() {
     () => items.filter((item) => isBeforeToday(item.date)),
     [items]
   );
+
+  const menuItems = useMemo(() => {
+    if (menuView === "past") {
+      return pastItems;
+    }
+    return items.filter((item) => item.type === menuView);
+  }, [items, menuView, pastItems]);
 
   const monthName = month.toLocaleDateString("en-US", {
     month: "long",
@@ -257,8 +333,8 @@ export default function HomePage() {
           <h2 style={{ fontSize: "1.5rem" }}>Your cozy planner</h2>
         </div>
         <div className="icon-btn" title="Weather">
-          <span role="img" aria-label="sunny">
-            ☁️
+          <span role="img" aria-label="weather">
+            {weather ? weatherIconForCode(weather.code) : "🌥️"}
           </span>
         </div>
       </header>
@@ -270,15 +346,27 @@ export default function HomePage() {
         <div className="flex-between">
           <div>
             <p className="small-text">Weather</p>
-            <p style={{ fontWeight: 600 }}>Nishi Waseda, Tokyo</p>
+            <p style={{ fontWeight: 600 }}>{NISHI_WASEDA.name}</p>
+            {weather && (
+              <p className="small-text">
+                {weatherLabelForCode(weather.code)} · updated{" "}
+                {new Date(weather.time).toLocaleTimeString("en-US", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
           </div>
           <div className="pill sky">
             <span role="img" aria-label="weather">
-              🌤️
+              {weather ? weatherIconForCode(weather.code) : "🌥️"}
             </span>
-            18°C
+            {weatherLoading && "Loading"}
+            {!weatherLoading && weather && `${weather.temperature}°C`}
+            {!weatherLoading && weatherError && "Offline"}
           </div>
         </div>
+        {weatherError && <p className="small-text">{weatherError}</p>}
       </div>
 
       <section className="card" style={{ display: "grid", gap: 14 }}>
@@ -435,27 +523,49 @@ export default function HomePage() {
                 ✕
               </button>
             </div>
-            <div className="menu-item">
+            <button
+              className="menu-item"
+              onClick={() => setMenuView("trip")}
+            >
               Trips <span>{items.filter((item) => item.type === "trip").length}</span>
-            </div>
-            <div className="menu-item">
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => setMenuView("event")}
+            >
               Events <span>{items.filter((item) => item.type === "event").length}</span>
-            </div>
-            <div className="menu-item">
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => setMenuView("todo")}
+            >
               Todos <span>{items.filter((item) => item.type === "todo").length}</span>
-            </div>
-            <div className="menu-item">
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => setMenuView("wishlist")}
+            >
               Wishlist <span>{items.filter((item) => item.type === "wishlist").length}</span>
-            </div>
-            <div className="menu-item">
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => setMenuView("past")}
+            >
               Past events <span>{pastItems.length}</span>
-            </div>
+            </button>
             <div className="card" style={{ display: "grid", gap: 12 }}>
-              <h4>Past events</h4>
-              {pastItems.length === 0 ? (
-                <p className="small-text">No past items yet.</p>
+              <div className="flex-between">
+                <h4>
+                  {menuView === "past"
+                    ? "Past events"
+                    : `${TYPE_LABELS[menuView]} list`}
+                </h4>
+                <span className="small-text">{menuItems.length}</span>
+              </div>
+              {menuItems.length === 0 ? (
+                <p className="small-text">Nothing here yet.</p>
               ) : (
-                pastItems.map((item) => (
+                menuItems.map((item) => (
                   <div key={item.id} className="small-text">
                     • {item.title || TYPE_LABELS[item.type]} ({item.date})
                   </div>
