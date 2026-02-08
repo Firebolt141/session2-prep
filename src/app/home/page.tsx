@@ -155,7 +155,9 @@ export default function HomePage() {
   const [month, setMonth] = useState<Date>(getMonthStart(new Date()));
   const [items, setItems] = useState<PlannerItem[]>([]);
   const [showMenu, setShowMenu] = useState(false);
-  const [menuView, setMenuView] = useState<ItemType | "past">("trip");
+  const [menuView, setMenuView] = useState<ItemType | "past" | "calendar">(
+    "calendar"
+  );
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<PlannerItem | null>(null);
   const [formData, setFormData] = useState<PlannerItem>(() =>
@@ -228,6 +230,9 @@ export default function HomePage() {
     if (menuView === "past") {
       return pastItems;
     }
+    if (menuView === "calendar") {
+      return [];
+    }
     return items.filter((item) => item.type === menuView);
   }, [items, menuView, pastItems]);
 
@@ -242,12 +247,14 @@ export default function HomePage() {
   const handleSelectDate = (day: number) => {
     const newDate = new Date(month.getFullYear(), month.getMonth(), day);
     setSelectedDate(newDate);
+    setMenuView("calendar");
   };
 
   const handleToday = () => {
     const today = new Date();
     setSelectedDate(today);
     setMonth(getMonthStart(today));
+    setMenuView("calendar");
   };
 
   const openNewForm = () => {
@@ -264,6 +271,11 @@ export default function HomePage() {
 
   const handleDelete = (itemId: string) => {
     setItems((prev) => prev.filter((item) => item.id !== itemId));
+  };
+
+  const handleMenuNavigate = (view: ItemType | "past") => {
+    setMenuView(view);
+    setShowMenu(false);
   };
 
   const handleToggleComplete = (item: PlannerItem) => {
@@ -369,147 +381,244 @@ export default function HomePage() {
         {weatherError && <p className="small-text">{weatherError}</p>}
       </div>
 
-      <section className="card" style={{ display: "grid", gap: 14 }}>
-        <div className="flex-between">
-          <button
-            className="icon-btn"
-            onClick={() => setMonth(addMonths(month, -1))}
-          >
-            ←
-          </button>
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontWeight: 700 }}>{monthName}</p>
-            <button className="secondary-btn" onClick={handleToday}>
-              Today
+      {menuView === "calendar" ? (
+        <>
+          <section className="card" style={{ display: "grid", gap: 14 }}>
+            <div className="flex-between">
+              <button
+                className="icon-btn"
+                onClick={() => setMonth(addMonths(month, -1))}
+              >
+                ←
+              </button>
+              <div style={{ textAlign: "center" }}>
+                <p style={{ fontWeight: 700 }}>{monthName}</p>
+                <button className="secondary-btn" onClick={handleToday}>
+                  Today
+                </button>
+              </div>
+              <button
+                className="icon-btn"
+                onClick={() => setMonth(addMonths(month, 1))}
+              >
+                →
+              </button>
+            </div>
+
+            <div className="calendar-grid" style={{ fontSize: "0.8rem" }}>
+              {WEEKDAYS.map((day) => (
+                <span key={day} className="small-text">
+                  {day}
+                </span>
+              ))}
+            </div>
+
+            <div className="calendar-grid">
+              {Array.from({ length: startDay }).map((_, index) => (
+                <span key={`blank-${index}`} />
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, index) => {
+                const day = index + 1;
+                const date = new Date(month.getFullYear(), month.getMonth(), day);
+                const key = formatDateKey(date);
+                const isSelected = key === dateKey;
+                const isToday = key === formatDateKey(new Date());
+                const hasItems = items.some((item) => itemOccursOnDate(item, key));
+                return (
+                  <button
+                    key={key}
+                    className={`calendar-day ${
+                      isSelected ? "selected" : ""
+                    } ${isToday ? "today" : ""}`}
+                    onClick={() => handleSelectDate(day)}
+                  >
+                    {day}
+                    {hasItems && <span className="dot" />}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section style={{ marginTop: 18, display: "grid", gap: 14 }}>
+            <div className="flex-between">
+              <h3>Plans for {selectedDate.toDateString()}</h3>
+              <button className="primary-btn" onClick={openNewForm}>
+                + Add
+              </button>
+            </div>
+
+            {visibleItems.length === 0 ? (
+              <div className="card small-text">
+                No plans yet. Add a trip, event, todo, or wishlist ✨
+              </div>
+            ) : (
+              visibleItems.map((item) => {
+                const autoCompleted = isAutoCompleted(item);
+                const completed =
+                  item.type === "todo" || item.type === "wishlist"
+                    ? item.completed
+                    : autoCompleted;
+                return (
+                  <div
+                    key={item.id}
+                    className={`item-card ${completed ? "completed" : ""}`}
+                    onClick={() => handleToggleComplete(item)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="flex-between">
+                      <span className={getTypePill(item.type)}>
+                        {TYPE_LABELS[item.type]}
+                      </span>
+                      <span className="small-text">
+                        {completed ? "Completed" : "Upcoming"}
+                      </span>
+                    </div>
+                    <div>
+                      <h4>{item.title || "Untitled"}</h4>
+                      {item.memo && <p className="small-text">{item.memo}</p>}
+                    </div>
+                    <div className="tag-row">
+                      {item.location && (
+                        <span className="pill sky">📍 {item.location}</span>
+                      )}
+                      {item.participants && (
+                        <span className="pill mint">👥 {item.participants}</span>
+                      )}
+                      {item.type === "trip" && (
+                        <span className="pill peach">
+                          {item.fromDate} → {item.toDate}
+                        </span>
+                      )}
+                      {item.type === "event" && (
+                        <span className="pill lavender">
+                          {item.date} {item.fromTime}
+                          {item.toTime ? ` → ${item.toTime}` : ""}
+                        </span>
+                      )}
+                      {(item.type === "todo" || item.type === "wishlist") && (
+                        <span className="pill lavender">{item.date}</span>
+                      )}
+                    </div>
+                    <div className="item-actions">
+                      <button
+                        className="secondary-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="secondary-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </section>
+        </>
+      ) : (
+        <section className="card" style={{ marginTop: 18, display: "grid", gap: 14 }}>
+          <div className="flex-between">
+            <div>
+              <p className="small-text">Category</p>
+              <h3>
+                {menuView === "past"
+                  ? "Past events"
+                  : `${TYPE_LABELS[menuView]} list`}
+              </h3>
+            </div>
+            <button className="secondary-btn" onClick={() => setMenuView("calendar")}>
+              Back to calendar
             </button>
           </div>
-          <button
-            className="icon-btn"
-            onClick={() => setMonth(addMonths(month, 1))}
-          >
-            →
-          </button>
-        </div>
-
-        <div className="calendar-grid" style={{ fontSize: "0.8rem" }}>
-          {WEEKDAYS.map((day) => (
-            <span key={day} className="small-text">
-              {day}
-            </span>
-          ))}
-        </div>
-
-        <div className="calendar-grid">
-          {Array.from({ length: startDay }).map((_, index) => (
-            <span key={`blank-${index}`} />
-          ))}
-          {Array.from({ length: daysInMonth }).map((_, index) => {
-            const day = index + 1;
-            const date = new Date(month.getFullYear(), month.getMonth(), day);
-            const key = formatDateKey(date);
-            const isSelected = key === dateKey;
-            const isToday = key === formatDateKey(new Date());
-            const hasItems = items.some((item) => itemOccursOnDate(item, key));
-            return (
-              <button
-                key={key}
-                className={`calendar-day ${
-                  isSelected ? "selected" : ""
-                } ${isToday ? "today" : ""}`}
-                onClick={() => handleSelectDate(day)}
-              >
-                {day}
-                {hasItems && <span className="dot" />}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section style={{ marginTop: 18, display: "grid", gap: 14 }}>
-        <div className="flex-between">
-          <h3>Plans for {selectedDate.toDateString()}</h3>
-          <button className="primary-btn" onClick={openNewForm}>
-            + Add
-          </button>
-        </div>
-
-        {visibleItems.length === 0 ? (
-          <div className="card small-text">
-            No plans yet. Add a trip, event, todo, or wishlist ✨
-          </div>
-        ) : (
-          visibleItems.map((item) => {
-            const autoCompleted = isAutoCompleted(item);
-            const completed =
-              item.type === "todo" || item.type === "wishlist"
-                ? item.completed
-                : autoCompleted;
-            return (
-              <div
-                key={item.id}
-                className={`item-card ${completed ? "completed" : ""}`}
-                onClick={() => handleToggleComplete(item)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="flex-between">
-                  <span className={getTypePill(item.type)}>
-                    {TYPE_LABELS[item.type]}
-                  </span>
-                  <span className="small-text">
-                    {completed ? "Completed" : "Upcoming"}
-                  </span>
-                </div>
-                <div>
-                  <h4>{item.title || "Untitled"}</h4>
-                  {item.memo && <p className="small-text">{item.memo}</p>}
-                </div>
-                <div className="tag-row">
-                  {item.location && <span className="pill sky">📍 {item.location}</span>}
-                  {item.participants && (
-                    <span className="pill mint">👥 {item.participants}</span>
-                  )}
-                  {item.type === "trip" && (
-                    <span className="pill peach">
-                      {item.fromDate} → {item.toDate}
+          {menuItems.length === 0 ? (
+            <p className="small-text">Nothing here yet.</p>
+          ) : (
+            menuItems.map((item) => {
+              const autoCompleted = isAutoCompleted(item);
+              const completed =
+                item.type === "todo" || item.type === "wishlist"
+                  ? item.completed
+                  : autoCompleted;
+              return (
+                <div
+                  key={item.id}
+                  className={`item-card ${completed ? "completed" : ""}`}
+                  onClick={() => handleToggleComplete(item)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="flex-between">
+                    <span className={getTypePill(item.type)}>
+                      {TYPE_LABELS[item.type]}
                     </span>
-                  )}
-                  {item.type === "event" && (
-                    <span className="pill lavender">
-                      {item.date} {item.fromTime}
-                      {item.toTime ? ` → ${item.toTime}` : ""}
+                    <span className="small-text">
+                      {completed ? "Completed" : "Upcoming"}
                     </span>
-                  )}
-                  {(item.type === "todo" || item.type === "wishlist") && (
-                    <span className="pill lavender">{item.date}</span>
-                  )}
+                  </div>
+                  <div>
+                    <h4>{item.title || "Untitled"}</h4>
+                    {item.memo && <p className="small-text">{item.memo}</p>}
+                  </div>
+                  <div className="tag-row">
+                    {item.location && (
+                      <span className="pill sky">📍 {item.location}</span>
+                    )}
+                    {item.participants && (
+                      <span className="pill mint">👥 {item.participants}</span>
+                    )}
+                    {item.type === "trip" && (
+                      <span className="pill peach">
+                        {item.fromDate} → {item.toDate}
+                      </span>
+                    )}
+                    {item.type === "event" && (
+                      <span className="pill lavender">
+                        {item.date} {item.fromTime}
+                        {item.toTime ? ` → ${item.toTime}` : ""}
+                      </span>
+                    )}
+                    {(item.type === "todo" || item.type === "wishlist") && (
+                      <span className="pill lavender">{item.date}</span>
+                    )}
+                  </div>
+                  <div className="item-actions">
+                    <button
+                      className="secondary-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleEdit(item);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="secondary-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDelete(item.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <div className="item-actions">
-                  <button
-                    className="secondary-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleEdit(item);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="secondary-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleDelete(item.id);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </section>
+              );
+            })
+          )}
+        </section>
+      )}
 
       {showMenu && (
         <div className="menu-panel" onClick={() => setShowMenu(false)}>
@@ -525,53 +634,34 @@ export default function HomePage() {
             </div>
             <button
               className="menu-item"
-              onClick={() => setMenuView("trip")}
+              onClick={() => handleMenuNavigate("trip")}
             >
               Trips <span>{items.filter((item) => item.type === "trip").length}</span>
             </button>
             <button
               className="menu-item"
-              onClick={() => setMenuView("event")}
+              onClick={() => handleMenuNavigate("event")}
             >
               Events <span>{items.filter((item) => item.type === "event").length}</span>
             </button>
             <button
               className="menu-item"
-              onClick={() => setMenuView("todo")}
+              onClick={() => handleMenuNavigate("todo")}
             >
               Todos <span>{items.filter((item) => item.type === "todo").length}</span>
             </button>
             <button
               className="menu-item"
-              onClick={() => setMenuView("wishlist")}
+              onClick={() => handleMenuNavigate("wishlist")}
             >
               Wishlist <span>{items.filter((item) => item.type === "wishlist").length}</span>
             </button>
             <button
               className="menu-item"
-              onClick={() => setMenuView("past")}
+              onClick={() => handleMenuNavigate("past")}
             >
               Past events <span>{pastItems.length}</span>
             </button>
-            <div className="card" style={{ display: "grid", gap: 12 }}>
-              <div className="flex-between">
-                <h4>
-                  {menuView === "past"
-                    ? "Past events"
-                    : `${TYPE_LABELS[menuView]} list`}
-                </h4>
-                <span className="small-text">{menuItems.length}</span>
-              </div>
-              {menuItems.length === 0 ? (
-                <p className="small-text">Nothing here yet.</p>
-              ) : (
-                menuItems.map((item) => (
-                  <div key={item.id} className="small-text">
-                    • {item.title || TYPE_LABELS[item.type]} ({item.date})
-                  </div>
-                ))
-              )}
-            </div>
             <Link href="/">
               <button className="secondary-btn">Log out</button>
             </Link>
