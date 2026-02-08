@@ -538,9 +538,17 @@ export default function HomePage() {
                   : `${TYPE_LABELS[menuView]} list`}
               </h3>
             </div>
-            <button className="secondary-btn" onClick={() => setMenuView("calendar")}>
-              Back to calendar
-            </button>
+            <div className="flex" style={{ gap: 10 }}>
+              <button
+                className="secondary-btn"
+                onClick={() => setMenuView("calendar")}
+              >
+                Back to calendar
+              </button>
+              <Link href="/">
+                <button className="secondary-btn">Log out</button>
+              </Link>
+            </div>
           </div>
           {menuItems.length === 0 ? (
             <p className="small-text">Nothing here yet.</p>
