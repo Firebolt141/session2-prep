@@ -1,0 +1,274 @@
+:root {
+  color-scheme: light;
+  --peach: #ffd7d7;
+  --lavender: #e7dcff;
+  --sky: #d7f0ff;
+  --mint: #dcffe7;
+  --ink: #2e2a3b;
+  --muted: #6f6a7d;
+  --card: #ffffff;
+  --shadow: 0 12px 30px rgba(57, 47, 97, 0.12);
+  --radius: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+}
+
+body {
+  background: linear-gradient(160deg, var(--peach), var(--lavender));
+  color: var(--ink);
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  border: none;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid rgba(79, 64, 128, 0.2);
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.page-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 18px 40px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.pill {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pill.peach {
+  background: var(--peach);
+}
+
+.pill.mint {
+  background: var(--mint);
+}
+
+.pill.lavender {
+  background: var(--lavender);
+}
+
+.pill.sky {
+  background: var(--sky);
+}
+
+.small-text {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.flex {
+  display: flex;
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.icon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(57, 47, 97, 0.2);
+}
+
+.primary-btn {
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 18px;
+  font-weight: 600;
+  width: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(46, 42, 59, 0.25);
+}
+
+.secondary-btn {
+  background: rgba(46, 42, 59, 0.08);
+  color: var(--ink);
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.fade-in {
+  animation: fade 0.3s ease-out;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 16, 37, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal {
+  width: min(520px, 95vw);
+  background: #fff;
+  border-radius: 32px 32px 0 0;
+  padding: 22px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.menu-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 16, 37, 0.45);
+  z-index: 30;
+  display: flex;
+}
+
+.menu-drawer {
+  width: min(300px, 80vw);
+  background: #fff;
+  padding: 24px 18px;
+  border-radius: 0 32px 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(231, 220, 255, 0.35);
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  text-align: center;
+}
+
+.calendar-day {
+  padding: 10px 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  position: relative;
+}
+
+.calendar-day.selected {
+  background: var(--ink);
+  color: #fff;
+}
+
+.calendar-day.today {
+  border: 2px solid var(--ink);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.item-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+}
+
+.item-card.completed {
+  opacity: 0.65;
+  text-decoration: line-through;
+}
+
+.item-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
